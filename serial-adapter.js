@@ -73,6 +73,11 @@ class SerialProperty extends Property {
       name: this.name,
       value: value,
     });
+    const changed = this.value !== value;
+    this.setCachedValue(value);
+    if (changed) {
+      this.device.notifyPropertyChanged(this);
+    }
     // We don't rely on the device to tell us that the value changed,
     // so we resolve the promise right away.
     return Promise.resolve(value);
@@ -142,8 +147,6 @@ class SerialAdapter extends Adapter {
     }
 
     this.rxPacket = new Packet();
-    this.rxPacket.showBytes = false;
-    this.rxPacket.showPackets = false;
 
     this.serialport.on('data', (data) => {
       this.onData(data);
@@ -214,9 +217,9 @@ class SerialAdapter extends Adapter {
   }
 
   onPropertyChanged(msgData) {
-    console.log('PropertyChanged: id:', msgData.id,
-                'name:', msgData.name,
-                'value:', msgData.value);
+    // console.log('PropertyChanged: id:', msgData.id,
+    //             'name:', msgData.name,
+    //             'value:', msgData.value);
 
     const thing = this.getDevice(msgData.id);
     if (thing) {
@@ -225,12 +228,12 @@ class SerialAdapter extends Adapter {
         property.setCachedValue(msgData.value);
         thing.notifyPropertyChanged(property);
       } else {
-        console.log('propertyChanged for unknown property:', msgData.name,
-                    '- ignoring');
+        // console.log('propertyChanged for unknown property:', msgData.name,
+        //            '- ignoring');
       }
     } else {
-      console.log('propertyChanged for unknown thing:', msgData.id,
-                  '- ignoring');
+      // console.log('propertyChanged for unknown thing:', msgData.id,
+      //             '- ignoring');
     }
   }
 
@@ -239,7 +242,7 @@ class SerialAdapter extends Adapter {
     for (const byte of data) {
       const buf = this.rxPacket.processByte(byte);
       if (buf) {
-        console.log('Rcvd:', buf.toString());
+        SHOW_RX_DATA && console.log('Rcvd:', buf.toString());
 
         const msg = JSON.parse(buf.toString());
         const data = msg.data;
@@ -269,6 +272,13 @@ class SerialAdapter extends Adapter {
 
   onOpen() {
     this.send('getAdapter');
+    const badCode = () => {
+      this.serialport.write(Buffer.from('\n'));
+      this.serialport.drain(function() {
+        setTimeout(badCode, 50);
+      });
+    };
+    badCode();
   }
 
   send(cmd, data) {
@@ -279,7 +289,7 @@ class SerialAdapter extends Adapter {
       messageType: cmd,
       data: data,
     });
-    this.serialport.write(Packet.makePacket(Buffer.from(msg)));
+    this.serialport.write(Buffer.from(`${msg}\n`));
     console.log(`Sent '${msg}'`);
   }
 }
