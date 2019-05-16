@@ -8,4 +8,4 @@
 
 'use strict';
 
-module.exports = require('./serial-adapter');
+module.exports = require('./serial-circuitpy-adapter');

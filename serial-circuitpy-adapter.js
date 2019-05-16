@@ -109,7 +109,7 @@ class SerialAdapter extends Adapter {
     // We don't yet know the name of the adapter, so we set it to
     // unknown for now, and replace it later once we get the information
     // from the device.
-    super(addonManager, 'serial-unknown', manifest.name);
+    super(addonManager, 'serial-circuitpy-unknown', manifest.name);
 
     this.manifest = manifest;
     this.port = port;
